@@ -36,17 +36,13 @@ The tool is designed to help anticipate specialty saturation, sector loads, and 
 5. **Auto-refreshes** every 60 seconds, updating all data and projections.
 
 ## Usage
-1. Place all files (`index.html`, `main.js`, `style.css`, `sectors.geojson`) in the root of a GitHub Pages repository.
-2. Open the site in your browser. No server or backend is required.
-3. The UI will update automatically with live VATSIM data and projections.
+1. Open the site in your browser. No server or backend is required.
+2. The UI will update automatically with live VATSIM data and projections.
 
 ## Requirements
 - Modern web browser (Chrome, Firefox, Edge, Safari)
 - Internet access to VATSIM data feed and sector GeoJSON
 - A valid `sectors.geojson` file for Houston ARTCC (ZHU)
-
-## Customization
-- To use for another ARTCC, replace `sectors.geojson` with your own sector polygons and update the ZHU airport list in `main.js`.
 
 ## License
 MIT License. See repository for details.
