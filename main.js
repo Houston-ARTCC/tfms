@@ -426,3 +426,15 @@ async function autoUpdateData() {
 
 // Initial load
 autoUpdateData();
+
+// Tool Info modal logic
+document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('tool-info-btn');
+    var modal = document.getElementById('tool-info-modal');
+    var closeBtn = document.getElementById('close-tool-info');
+    if (btn && modal && closeBtn) {
+        btn.onclick = function() { modal.style.display = 'flex'; };
+        closeBtn.onclick = function() { modal.style.display = 'none'; };
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+    }
+});
