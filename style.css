@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap');
+
+/* === Specialty Summary Colors === */
+.ss-green {
+  background: #1b2e1b !important;
+  color: #b6e7b6;
+}
+.ss-yellow {
+  background: #2e2e1b !important;
+  color: #f3e9b6;
+}
+.ss-red {
+  background: #2e1b1b !important;
+  color: #f3b6b6;
+}
+
+/* === Base Layout === */
+body {
+    font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
+    line-height: 1.7em;
+    font-size: 16px;
+    background: #181a20;
+    color: #e3e6eb;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+/* === Status, Results, Footer === */
+#status {
+    margin-bottom: 1em;
+    color: #bdbdbd;
+    text-align: center;
+}
+#results {
+    margin: 0 auto 12px auto;
+    max-width: 1280px;
+}
+#footer {
+    color: #bdbdbd;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+/* === Card Styles === */
+.card {
+    background: #23262f;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+    padding: 18px 24px 12px 24px;
+    margin-bottom: 20px;
+    border: 1px solid #353a45;
+}
+.card h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 17px;
+    font-weight: 500;
+    color: #90caf9;
+}
+.card table {
+    background: transparent;
+}
+
+/* === Table Styles === */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #23262f;
+    color: #e3e6eb;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.22);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1em;
+}
+th, td {
+    border: 1px solid #353a45;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 0.97em;
+}
+th {
+    background: #23272b;
+    color: #90caf9;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+tr:nth-child(even) td {
+    background: #181a1b;
+}
+tr:hover td {
+    background: #263238;
+}
+
+/* === Flex container for summary cards === */
+.summary-flex {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+.summary-flex > .card {
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === Footer Card === */
+#footer-card {
+  padding: 0;
+}
+#footer-card #footer {
+  padding: 18px 24px 12px 24px;
+  margin: 0;
+}
