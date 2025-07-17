@@ -1,6 +1,113 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap');
 
-#tool-info-modal {
+.card-wide table,
+.card-wide th,
+.card-wide td {
+  font-size: 0.93em;
+}
+.summary-flex {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.summary-flex > .card {
+  flex: 1 1 320px;
+  min-width: 220px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1100px) {
+  .summary-flex {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .summary-flex > .card {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+.header-btn-row {
+  float: right;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: -50px;
+}
+
+.tool-info-list {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-left: 22px;
+}
+.tool-info-list-main {
+  margin-bottom: 16px;
+}
+
+body {
+  font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
+  background: #181a20;
+  color: #e3e6eb;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Material Dark Card */
+.card, .card-wide {
+  background: #23262f;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+  padding: 20px 28px 16px 28px;
+  margin: 18px auto;
+  border: 1px solid #353a45;
+  max-width: 1280px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.card h3, .card-wide h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #90caf9;
+}
+
+/* Table Styles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #23262f;
+  color: #e3e6eb;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.22);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1em;
+}
+th, td {
+  border: 1px solid #353a45;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 1em;
+}
+th {
+  background: #23272b;
+  color: #90caf9;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+tr:nth-child(even) td {
+  background: #181a1b;
+}
+tr:hover td {
+  background: #263238;
+}
+
+/* Modal Styles */
+.modal {
   display: none;
   position: fixed;
   top: 0;
@@ -12,40 +119,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
 }
-
-/* Header buttons (Tool Info, Log controls) */
-.header-btn {
-  padding: 6px 16px;
-  margin-top: -50px;
-  font-size: 15px;
-  border-radius: 6px;
-  background: #353a45;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.header-btn:hover {
-  background: #444;
-}
-.tool-info-content {
+.modal-content {
   background: #23262f;
   padding: 32px 28px 24px 28px;
   border-radius: 14px;
-  max-width: 480px;
+  max-width: 420px;
+  width: auto;
+  min-width: 220px;
   margin: auto;
   box-shadow: 0 2px 24px rgba(0,0,0,0.45);
   color: #e3e6eb;
   position: relative;
+  max-height: 80vh;
+  overflow-y: auto;
 }
-.tool-info-content h2 {
-  margin-top: 0;
-  color: #90caf9;
-  font-size: 22px;
-}
-#close-tool-info {
+.close {
   position: absolute;
   top: 12px;
   right: 16px;
@@ -55,13 +144,24 @@
   color: #bdbdbd;
   cursor: pointer;
 }
-.tool-info-text div {
-  margin-top: 12px;
-  color: #bdbdbd;
-  font-size: 14px;
+
+/* Buttons */
+button, .header-btn {
+  padding: 7px 18px;
+  font-size: 15px;
+  border-radius: 6px;
+  background: #353a45;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin: 4px 2px;
+}
+button:hover, .header-btn:hover {
+  background: #444;
 }
 
-/* === Specialty Summary Colors === */
+/* Specialty Summary Colors */
 .ss-green {
   background: #1b2e1b !important;
   color: #b6e7b6;
@@ -75,122 +175,18 @@
   color: #f3b6b6;
 }
 
-/* === Base Layout === */
-body {
-    font-family: 'Roboto', 'Open Sans', Arial, sans-serif;
-    line-height: 1.7em;
-    font-size: 16px;
-    background: #181a20;
-    color: #e3e6eb;
-    min-height: 100vh;
-    margin: 0;
-    padding: 0;
-}
-
-/* === Status, Results, Footer === */
-#status {
-    margin-bottom: 1em;
-    color: #bdbdbd;
-    text-align: center;
-}
+/* Layout helpers */
 #results {
-    margin: 0 auto 12px auto;
-    max-width: 1280px;
+  margin: 0 auto 12px auto;
+  max-width: 1280px;
 }
 #footer {
-    color: #bdbdbd;
-    text-align: center;
-    margin-bottom: 24px;
-}
+  color: #bdbdbd;
+  text-align: center;
 
-/* === Card Styles === */
-.card {
-    background: #23262f;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.32);
-    padding: 18px 24px 12px 24px;
-    margin-bottom: 20px;
-    border: 1px solid #353a45;
-    margin-left: 4px;
-    margin-right: 4px;
 }
-.card h3 {
-    margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 17px;
-    font-weight: 500;
-    color: #90caf9;
-}
-.card table {
-    background: transparent;
-}
-
-/* === Table Styles === */
-table {
-    border-collapse: collapse;
-    width: 100%;
-    background: #23262f;
-    color: #e3e6eb;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.22);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 1em;
-}
-th, td {
-    border: 1px solid #353a45;
-    padding: 6px 10px;
-    text-align: left;
-    font-size: 0.97em;
-}
-th {
-    background: #23272b;
-    color: #90caf9;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-tr:nth-child(even) td {
-    background: #181a1b;
-}
-tr:hover td {
-    background: #263238;
-}
-
-/* === Flex container for summary cards === */
-.summary-flex {
-  display: flex;
-  gap: 24px;
-  align-items: stretch;
-  margin-bottom: 20px;
-}
-.summary-flex > .card {
-  flex: 1 1 0;
-  min-width: 220px;
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Responsive: stack summary cards vertically on small screens */
-@media (max-width: 1100px) {
-  .summary-flex {
-    flex-direction: column;
-    gap: 14px;
-  }
-  .summary-flex > .card {
-    max-width: 100%;
-    min-width: 0;
-  }
-  .card {
-    margin-left: 6px;
-    margin-right: 6px;
-  }
-}
-
-/* === Footer Card === */
-#footer-card {
-  padding: 0;
-}
-#footer-card #footer {
-  padding: 18px 24px 12px 24px;
-  margin: 0;
+#status {
+  margin-bottom: 1em;
+  color: #bdbdbd;
+  text-align: center;
 }

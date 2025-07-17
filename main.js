@@ -218,7 +218,15 @@ function renderResults(projections) {
     // Build new data map for comparison
     let newTableData = {};
 
-    // ...existing code...
+    // Sort projections by callsign (case-insensitive)
+    projections = projections.slice().sort((a, b) => {
+        const ca = (a.callsign || '').toUpperCase();
+        const cb = (b.callsign || '').toUpperCase();
+        if (ca < cb) return -1;
+        if (ca > cb) return 1;
+        return 0;
+    });
+
     let html = `<table id="flights-table"><thead><tr>
         <th>Callsign</th>
         <th>Aircraft</th>
@@ -266,7 +274,7 @@ function renderResults(projections) {
         </tr>`;
     }
     html += '</tbody></table>';
-    container.innerHTML = html;
+
 
     // --- Specialty summary table ---
     // Count aircraft per specialty (excluding TRACON and blank specialties)
@@ -405,8 +413,11 @@ function renderResults(projections) {
     summaryWrapper += '</div>';
     container.innerHTML = summaryWrapper;
 
-    // --- Airborne flights table (moved to bottom, in a card) ---
-    container.innerHTML += `<div class="card">${html}</div>`;
+    // --- Airborne flights table (moved to bottom, in a wide card) ---
+    // Add heading styled like other card headings
+    container.innerHTML += `<div class="card card-wide"><h3>Airborne Flights</h3>${html}</div>`;
+
+    // ...existing code...
 }
 
 
@@ -444,8 +455,6 @@ async function autoUpdateData() {
         }
     }, 1000);
 }
-
-
 
 // Initial load
 autoUpdateData();

@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHU TFMS</title>
     <link rel="stylesheet" href="style.css">
@@ -9,20 +8,20 @@
 <body>
     <div class="card" id="header-card">
         <h1>ZHU TFMS</h1>
-        <div style="float:right;display:flex;gap:8px;align-items:center;margin-top:-8px;">
+        <div class="header-btn-row">
             <button id="start-log-btn" class="header-btn">Start Log</button>
             <button id="stop-log-btn" class="header-btn" style="display:none;">Stop Log</button>
             <button id="download-log-btn" class="header-btn" style="display:none;">Download CSV</button>
             <button id="tool-info-btn" class="header-btn">Tool Info</button>
         </div>
     </div>
-    <div id="tool-info-modal">
-        <div class="tool-info-content">
+    <div id="tool-info-modal" class="modal">
+        <div class="modal-content">
             <h2>Tool Info</h2>
-            <button id="close-tool-info">&times;</button>
+            <button id="close-tool-info" class="close">&times;</button>
             <div class="tool-info-text">
                 <b>What this tool does:</b>
-                <ul style="margin-top:8px;margin-bottom:16px;">
+                <ul class="tool-info-list tool-info-list-main">
                     <li>Shows all airborne flights within or near (50 nm) ZHU using VATSIM data</li>
                     <li>Assigns flights to sectors and specialties using official sector polygons and standard specialties</li>
                     <li>Projects specialty loads at +5, +10, +20 minutes</li>
@@ -30,7 +29,7 @@
                     <li>Auto-refreshes every 60 seconds</li>
                 </ul>
                 <b>Limitations:</b>
-                <ul style="margin-top:8px;">
+                <ul class="tool-info-list">
                     <li>Sector assignment is based on position and altitude only; does not account for dynamic splits</li>
                     <li>Projections assume constant heading and groundspeed; advanced flight path projection is not modeled</li>
                     <li>Load accuracy decreases as projection time increases</li>
@@ -41,6 +40,7 @@
         </div>
     </div>
     <div id="status"></div>
+    <div class="card" id="header-card">
     <div id="results"></div>
     <div class="card" id="footer-card"><div id="footer"></div></div>
     <script src="main.js"></script>
