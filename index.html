@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Houston ARTCC TFMS</title>
+    <title>ZHU TFMS</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="card" id="header-card">
-        <h1>Houston ARTCC TFMS</h1>
-        <button id="tool-info-btn">Tool Info</button>
+        <h1>ZHU TFMS</h1>
+        <div style="float:right;display:flex;gap:8px;align-items:center;margin-top:-8px;">
+            <button id="start-log-btn" class="header-btn">Start Log</button>
+            <button id="stop-log-btn" class="header-btn" style="display:none;">Stop Log</button>
+            <button id="download-log-btn" class="header-btn" style="display:none;">Download CSV</button>
+            <button id="tool-info-btn" class="header-btn">Tool Info</button>
+        </div>
     </div>
     <div id="tool-info-modal">
         <div class="tool-info-content">
@@ -22,7 +27,7 @@
                     <li>Assigns flights to sectors and specialties using official sector polygons and standard specialties</li>
                     <li>Projects specialty loads at +5, +10, +20 minutes</li>
                     <li>Color codes projections to quickly spot trending saturation levels</li>
-                    <li>Auto-refreshs every 60 seconds</li>
+                    <li>Auto-refreshes every 60 seconds</li>
                 </ul>
                 <b>Limitations:</b>
                 <ul style="margin-top:8px;">

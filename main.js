@@ -203,6 +203,11 @@ async function updateData() {
 // Store previous values for flashing
 let previousTableData = {};
 
+// Specialty Summary Logging
+let specialtyLogActive = false;
+let specialtyLog = [];
+let specialtyLogHeaders = [];
+
 function renderResults(projections) {
     const container = document.getElementById('results');
     if (projections.length === 0) {
@@ -332,6 +337,24 @@ function renderResults(projections) {
     }
     summaryHtml += '</tbody></table>';
 
+    // --- Specialty Summary Logging ---
+    if (specialtyLogActive && allSpecialties.length > 0) {
+        // On first log, set headers (only NOW columns)
+        if (specialtyLog.length === 0) {
+            specialtyLogHeaders = ['Timestamp (UTC)'];
+            for (const specialty of allSpecialties.sort()) {
+                specialtyLogHeaders.push(`${specialty} Now`);
+            }
+            specialtyLog.push(specialtyLogHeaders);
+        }
+        // Build row (UTC timestamp, only NOW columns)
+        let row = [new Date().toISOString().replace('T', ' ').replace(/\..+/, '') + 'Z'];
+        for (const specialty of allSpecialties.sort()) {
+            row.push(specialtyCounts[specialty] || 0);
+        }
+        specialtyLog.push(row);
+    }
+
     // --- Inbound/Outbound/Internal/Overflight summary table ---
     let inbound = 0, outbound = 0, internal = 0, overflight = 0;
     for (const p of projections) {
@@ -432,9 +455,52 @@ document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('tool-info-btn');
     var modal = document.getElementById('tool-info-modal');
     var closeBtn = document.getElementById('close-tool-info');
+    // Always hide modal on load
+    if (modal) modal.style.display = 'none';
     if (btn && modal && closeBtn) {
         btn.onclick = function() { modal.style.display = 'flex'; };
         closeBtn.onclick = function() { modal.style.display = 'none'; };
         modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+    }
+
+    // --- Specialty Summary Logging Buttons ---
+    var startBtn = document.getElementById('start-log-btn');
+    var stopBtn = document.getElementById('stop-log-btn');
+    var downloadBtn = document.getElementById('download-log-btn');
+    function updateLogButtons() {
+        if (specialtyLogActive) {
+            startBtn.style.display = 'none';
+            stopBtn.style.display = '';
+            downloadBtn.style.display = '';
+        } else {
+            startBtn.style.display = '';
+            stopBtn.style.display = 'none';
+            downloadBtn.style.display = specialtyLog.length > 1 ? '' : 'none';
+        }
+    }
+    if (startBtn && stopBtn && downloadBtn) {
+        startBtn.onclick = function() {
+            specialtyLogActive = true;
+            specialtyLog = [];
+            updateLogButtons();
+        };
+        stopBtn.onclick = function() {
+            specialtyLogActive = false;
+            updateLogButtons();
+        };
+        downloadBtn.onclick = function() {
+            if (specialtyLog.length > 1) {
+                let csv = specialtyLog.map(row => row.map(cell => '"'+cell.toString().replace(/"/g,'""')+'"').join(",")).join("\r\n");
+                let blob = new Blob([csv], {type: 'text/csv'});
+                let url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = 'specialty_summary_log.csv';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            }
+        };
+        updateLogButtons();
     }
 });
