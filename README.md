@@ -1,52 +1,38 @@
 # Houston ARTCC TFMS Viewer
+## How to Use
 
-A pure frontend, table-based traffic management tool for the Houston ARTCC (ZHU) on VATSIM.
+1. **Open the site in your browser.** No server or backend is required.
+2. **Upload a custom split JSON (optional):**
+   - Click the "Upload Split" button and select a JSON file with your split definitions.
+   - Example split JSON:
+     ```json
+     {
+       "24": ["24", "92", "63", "25"],
+       "34": ["34", "27", "65"],
+       "46": ["46", "47", "48", "49", "50"]
+     }
+     ```
+   - Each key is a split name; each value is an array of sector names/IDs as defined in your `sectors.geojson`.
+3. **Review the summary tables and flights table:**
+   - Specialty Summary: Shows current and projected (+5, +10, +20 min) aircraft counts by specialty.
+   - Split Summary: Shows counts for your custom splits (if uploaded).
+   - ZHU Enroute Online: Lists all ZHU enroute controllers online.
+   - Airborne Flights: Table of all tracked flights with details.
+4. **Data auto-refreshes every 60 seconds.**
+5. **If a data fetch error occurs, use the Retry button to reload without losing your custom split or logging state.**
 
-## Purpose
-This site provides real-time situational awareness for Houston ARTCC traffic managers and controllers. It visualizes live VATSIM data, showing:
-- All airborne flights within or near the ZHU ARTCC boundary
-- Projected sector/specialty loads at +5, +10, and +20 minutes
-- Inbound, outbound, internal, and overflight traffic counts
-- ZHU Enroute controller staffing
+## What the Tool Does
 
-The tool is designed to help anticipate specialty saturation, sector loads, and traffic flows, supporting effective traffic management and controller staffing decisions.
+- Visualizes all airborne flights within or near (50 NM) the ZHU ARTCC boundary using live VATSIM data.
+- Assigns each flight to a sector and specialty using Houston ARTCC sector polygons.
+- Projects each flight's position +5, +10, and +20 minutes ahead to estimate future specialty and split loads.
+- Displays summary tables for specialties and custom splits, plus a detailed flights table and controller list.
+- Supports uploading a custom split JSON for split-based summary counts.
+- Auto-refreshes data every 60 seconds, with a countdown and last updated timestamp.
+- Handles data fetch errors gracefully, preserving your custom split and logging state.
 
-## Features
-- **Live VATSIM Data**: Fetches and processes live VATSIM pilot and controller data.
-- **Sector & Specialty Assignment**: Assigns each flight to a sector and specialty using Houston ARTCC sector polygons (GeoJSON).
-- **Perimeter Logic**: Includes aircraft within 50 NM of the ZHU boundary if inbound to a ZHU airport, projecting their entry sector/specialty.
-- **Projection Engine**: Projects each flight's position +5, +10, and +20 minutes ahead, showing projected specialty counts in the summary table.
-- **Summary Tables**: Card-based UI for specialty summary, traffic type summary, and ZHU Enroute controller list.
-- **Flights Table**: Detailed list of all tracked flights, including route, filed route, sector/specialty, and more.
-- **Material Dark Theme**: Modern, readable, and compact UI.
-- **Auto-Refresh**: Data updates every 60 seconds, with countdown and last updated timestamp.
-- **Deployable on GitHub Pages**: No backend required; all logic runs in the browser.
+## What the Tool Does NOT Do
 
-## Files
-- `index.html`: Main HTML entry point.
-- `main.js`: Core logic for fetching, filtering, projecting, and rendering VATSIM data and UI.
-- `style.css`: Material dark theme and custom styles for cards, tables, and layout.
-- `sectors.geojson`: Houston ARTCC sector polygons, including the ZHU perimeter. Required for correct operation.
-
-## How It Works
-1. **Fetches** VATSIM data and Houston sector polygons (GeoJSON).
-2. **Assigns** each flight to a sector/specialty based on position and altitude.
-3. **Projects** each flight's position +5, +10, +20 minutes ahead to estimate future specialty loads.
-4. **Displays** summary tables and a detailed flights table in a modern, card-based UI.
-5. **Auto-refreshes** every 60 seconds, updating all data and projections.
-
-## Usage
-1. Open the site in your browser. No server or backend is required.
-2. The UI will update automatically with live VATSIM data and projections.
-
-## Requirements
-- Modern web browser (Chrome, Firefox, Edge, Safari)
-- Internet access to VATSIM data feed and sector GeoJSON
-- A valid `sectors.geojson` file for Houston ARTCC (ZHU)
-
-## License
-MIT License. See repository for details.
-
----
-
-**Developed for Houston ARTCC traffic management and situational awareness.**
+- Does not provide graphical maps or sector overlays (table-based only).
+- Does not persist custom splits or logs after a full browser refresh (session only).
+- Does not support editing splits in the UI yet (upload only).

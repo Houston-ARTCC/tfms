@@ -224,6 +224,21 @@ async function updateData() {
     } catch (e) {
         window.processingStatus = 'Error: ' + e.message;
         updateFooter();
+        // Show a non-blocking error message and allow retry
+        const container = document.getElementById('results');
+        if (container) {
+            container.innerHTML = `<div class='card' style='color:#f3b6b6;'><b>Error fetching VATSIM data:</b> ${e.message}<br>
+            <button id='retry-btn' style='margin-top:12px;'>Retry</button></div>`;
+            const retryBtn = document.getElementById('retry-btn');
+            if (retryBtn) {
+                retryBtn.onclick = function() {
+                    window.processingStatus = '';
+                    updateFooter();
+                    autoUpdateData();
+                };
+            }
+        }
+        // Preserve custom splits and specialty logging state (no reset)
     }
 }
 
@@ -372,9 +387,9 @@ function renderResults(projections) {
             const c10 = splitCounts10[splitName] || 0;
             const c20 = splitCounts20[splitName] || 0;
             function getClass(val) {
-                if (val < 5) return 'ss-green';
-                else if (val >= 6 && val <= 10) return 'ss-yellow';
-                else if (val > 11) return 'ss-red';
+                if (val >= 0 && val <= 9) return 'ss-green';
+                else if (val >= 10 && val <= 19) return 'ss-yellow';
+                else if (val >= 20) return 'ss-red';
                 else return '';
             }
             splitSummaryHtml += `<tr><td>${splitName}</td>`
@@ -524,7 +539,7 @@ let nextUpdate = null;
 let countdownInterval = null;
 
 // Version number for display in footer
-const TOOL_VERSION = '1.5.1';
+const TOOL_VERSION = '1.5.2';
 
 function updateFooter() {
     const footer = document.getElementById('footer');
