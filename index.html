@@ -13,6 +13,8 @@
             <button id="stop-log-btn" class="header-btn" style="display:none;">Stop Log</button>
             <button id="download-log-btn" class="header-btn" style="display:none;">Download CSV</button>
             <button id="tool-info-btn" class="header-btn">Tool Info</button>
+            <input type="file" id="split-upload" accept="application/json" style="display:none;">
+            <button id="split-upload-btn" class="header-btn">Upload Split</button>
         </div>
     </div>
     <div id="tool-info-modal" class="modal">
@@ -22,25 +24,31 @@
             <div class="tool-info-text">
                 <b>What this tool does:</b>
                 <ul class="tool-info-list tool-info-list-main">
-                    <li>Shows all airborne flights within or near (50 nm) ZHU using VATSIM data</li>
+                    <li>Displays all airborne flights currently inside a ZHU sector (based on position and altitude)</li>
+                    <li>Displays flights within 50 NM of the ZHU perimeter if their heading is within 45&#176; to the closest point on the ZHU border</li>
                     <li>Assigns flights to sectors and specialties using official sector polygons and standard specialties</li>
-                    <li>Projects specialty loads at +5, +10, +20 minutes</li>
+                    <li>Projects specialty loads at +5, +10, +20 minutes (assuming constant heading and groundspeed)</li>
                     <li>Color codes projections to quickly spot trending saturation levels</li>
                     <li>Auto-refreshes every 60 seconds</li>
+                </ul>
+                <b>Filters in effect:</b>
+                <ul class="tool-info-list">
+                    <li>Only flights with groundspeed &gt; 20 knots are shown</li>
+                    <li>Flights below 10,000 ft are shown as "TRACON"</li>
+                    <li>Flights inside ZHU sectors are always shown</li>
+                    </li>
                 </ul>
                 <b>Limitations:</b>
                 <ul class="tool-info-list">
                     <li>Sector assignment is based on position and altitude only; does not account for dynamic splits</li>
                     <li>Projections assume constant heading and groundspeed; advanced flight path projection is not modeled</li>
                     <li>Load accuracy decreases as projection time increases</li>
-                    <li>Only includes flights with groundspeed ≥ 20 knots</li>
-                    <li>Probably several more limitations not listed here :)</li>
+                    <li>Other limitations may exist</li>
                 </ul>
             </div>
         </div>
     </div>
     <div id="status"></div>
-    <div class="card" id="header-card">
     <div id="results"></div>
     <div class="card" id="footer-card"><div id="footer"></div></div>
     <script src="main.js"></script>

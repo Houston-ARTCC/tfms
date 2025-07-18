@@ -2,8 +2,6 @@
 const ZHU_AIRPORTS = [
     'KAEX','KARA','KAUS','KBAZ','KBFM','KBIX','KBPT','KBRO','KBTR','KCLL','KCRP','KCWF','KCXO','KDLF','KDWH','KEDC','KEFD','KGLS','KGPT','KGTU','KHDC','KHOU','KHRL','KHSA','KHUM','KHYI','KIAH','KLCH','KLFT','KLRD','KMFE','KMOB','KMSY','KNBG','KNEW','KNGP','KNGW','KNOG','KNQI','KNWL','KPOE','KPQL','KRND','KSAT','KSGR','KSKF','KSSF','KTME','KVCT'
 ];
-// main.js
-// Houston ARTCC Traffic Management Tool (Pure Frontend)
 
 const VATSIM_API = 'https://data.vatsim.net/v3/vatsim-data.json'; // CORS-enabled mirror
 const HOUSTON_SECTORS_GEOJSON = 'sectors.geojson'; // Place your GeoJSON file in the root folder
@@ -129,41 +127,70 @@ async function updateData() {
                     nearPerimeter: false
                 };
             }
-            // If not in any sector, check if within 50 NM of ZHU perimeter and destination is a ZHU airport
+            // If not in any sector, check if within 50 NM of ZHU perimeter (regardless of destination)
             if (zhuPerimeter) {
                 let dist = minDistanceToPolygon(pilot.latitude, pilot.longitude, zhuPerimeter);
-                let arrival = (pilot.flight_plan && pilot.flight_plan.arrival) ? pilot.flight_plan.arrival.toUpperCase() : '';
-                if (dist <= 50 && ZHU_AIRPORTS.includes(arrival)) {
-                    // Project 25 NM ahead along heading
-                    let proj = null;
-                    if (typeof pilot.heading === 'number' && typeof pilot.groundspeed === 'number') {
-                        // Calculate minutes to travel 25 NM
-                        let minutes = pilot.groundspeed > 0 ? (25 / pilot.groundspeed) * 60 : 0;
-                        proj = projectPosition(pilot.latitude, pilot.longitude, pilot.heading, pilot.groundspeed, minutes);
+                if (dist <= 50) {
+                    // Find closest point on ZHU perimeter
+                    let minDist = Infinity, closestPt = null;
+                    for (let i = 0; i < zhuPerimeter.length; ++i) {
+                        let [lon, lat] = zhuPerimeter[i];
+                        let d = haversineNM(pilot.latitude, pilot.longitude, lat, lon);
+                        if (d < minDist) {
+                            minDist = d;
+                            closestPt = { lat, lon };
+                        }
                     }
-                    let sector = '', specialty = '';
-                    if (proj) {
-                        for (let i = 0; i < sectors.features.length; ++i) {
-                            const feature = sectors.features[i];
-                            if (feature.properties && feature.properties.sector && feature.properties.sector.toLowerCase() === 'zhu') continue;
-                            const poly = feature.geometry.coordinates[0];
-                            if (pointInPolygon([proj[1], proj[0]], poly)) {
-                                let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
-                                let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
-                                if (typeof altitude === 'number' && altitude >= floor && altitude < ceiling) {
-                                    sector = feature.properties.sector;
-                                    specialty = feature.properties.specialty;
-                                    break;
+                    // Calculate bearing from aircraft to closest perimeter point
+                    function bearingTo(lat1, lon1, lat2, lon2) {
+                        const toRad = x => x * Math.PI / 180;
+                        const toDeg = x => x * 180 / Math.PI;
+                        const dLon = toRad(lon2 - lon1);
+                        lat1 = toRad(lat1);
+                        lat2 = toRad(lat2);
+                        const y = Math.sin(dLon) * Math.cos(lat2);
+                        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+                        let brng = Math.atan2(y, x);
+                        return (toDeg(brng) + 360) % 360;
+                    }
+                    let bearing = closestPt ? bearingTo(pilot.latitude, pilot.longitude, closestPt.lat, closestPt.lon) : null;
+                    let heading = typeof pilot.heading === 'number' ? pilot.heading : null;
+                    let headingDiff = (bearing !== null && heading !== null)
+                        ? Math.abs(((heading - bearing + 540) % 360) - 180)
+                        : null;
+                    // Only include if heading is within 45° of bearing to perimeter
+                    if (headingDiff !== null && headingDiff <= 45) {
+                        // Project 25 NM ahead along heading
+                        let proj = null;
+                        if (typeof pilot.heading === 'number' && typeof pilot.groundspeed === 'number') {
+                            // Calculate minutes to travel 25 NM
+                            let minutes = pilot.groundspeed > 0 ? (25 / pilot.groundspeed) * 60 : 0;
+                            proj = projectPosition(pilot.latitude, pilot.longitude, pilot.heading, pilot.groundspeed, minutes);
+                        }
+                        let sector = '', specialty = '';
+                        if (proj) {
+                            for (let i = 0; i < sectors.features.length; ++i) {
+                                const feature = sectors.features[i];
+                                if (feature.properties && feature.properties.sector && feature.properties.sector.toLowerCase() === 'zhu') continue;
+                                const poly = feature.geometry.coordinates[0];
+                                if (pointInPolygon([proj[1], proj[0]], poly)) {
+                                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
+                                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
+                                    if (typeof altitude === 'number' && altitude >= floor && altitude < ceiling) {
+                                        sector = feature.properties.sector;
+                                        specialty = feature.properties.specialty;
+                                        break;
+                                    }
                                 }
                             }
                         }
+                        return {
+                            ...pilot,
+                            sector,
+                            specialty,
+                            nearPerimeter: true
+                        };
                     }
-                    return {
-                        ...pilot,
-                        sector,
-                        specialty,
-                        nearPerimeter: true
-                    };
                 }
             }
             return null;
@@ -239,7 +266,7 @@ function renderResults(projections) {
     for (const p of projections) {
         let dep = (p.departure || '').toUpperCase();
         let arr = (p.arrival || '').toUpperCase();
-        let routeCell = `${dep} → ${arr}`;
+        let routeCell = `${dep} &rarr; ${arr}`;
         let aircraft = (p.flight_plan && p.flight_plan.aircraft_short) ? p.flight_plan.aircraft_short : (p.flight_plan && p.flight_plan.aircraft) ? p.flight_plan.aircraft : '';
         let gs = (typeof p.groundspeed === 'number') ? p.groundspeed : '';
         let alt = '';
@@ -279,14 +306,91 @@ function renderResults(projections) {
     // --- Specialty summary table ---
     // Count aircraft per specialty (excluding TRACON and blank specialties)
     let specialtyCounts = {};
-    // Prepare projection counts for +5, +10, +20 min using corrected logic
     let projCounts5 = {}, projCounts10 = {}, projCounts20 = {};
+    // --- Split summary table ---
+    let splitSummaryHtml = '';
+    if (window.customSplits) {
+        // Build sector lookup: sector name/id -> specialty
+        let sectorLookup = {};
+        for (const f of window.sectorsGeoJSON.features) {
+            if (f.properties && f.properties.sector) {
+                sectorLookup[f.properties.sector] = f.properties;
+            }
+        }
+        // Helper: get sector for a projection
+        function getProjSector(proj, alt) {
+            if (!proj) return null;
+            let found = null;
+            for (let i = 0; i < window.sectorsGeoJSON.features.length; ++i) {
+                const feature = window.sectorsGeoJSON.features[i];
+                const poly = feature.geometry.coordinates[0];
+                if (pointInPolygon([proj[1], proj[0]], poly)) {
+                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
+                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
+                    if (typeof alt === 'number' && alt >= floor && alt < ceiling) {
+                        found = feature.properties;
+                        break;
+                    }
+                }
+            }
+            return found ? found.sector : null;
+        }
+        // Count flights per split
+        let splitCounts = {}, splitCounts5 = {}, splitCounts10 = {}, splitCounts20 = {};
+        for (const splitName in window.customSplits) {
+            splitCounts[splitName] = 0;
+            splitCounts5[splitName] = 0;
+            splitCounts10[splitName] = 0;
+            splitCounts20[splitName] = 0;
+        }
+        for (const p of projections) {
+            // Now
+            let sectorNow = (typeof p.altitude === 'number' && p.altitude < 10000) ? null : p.sector;
+            for (const splitName in window.customSplits) {
+                if (sectorNow && window.customSplits[splitName].includes(sectorNow)) {
+                    splitCounts[splitName]++;
+                }
+            }
+            // Projections
+            if (!(typeof p.altitude === 'number' && p.altitude < 10000)) {
+                let s5 = getProjSector(p.proj5, p.altitude);
+                let s10 = getProjSector(p.proj10, p.altitude);
+                let s20 = getProjSector(p.proj20, p.altitude);
+                for (const splitName in window.customSplits) {
+                    if (s5 && window.customSplits[splitName].includes(s5)) splitCounts5[splitName]++;
+                    if (s10 && window.customSplits[splitName].includes(s10)) splitCounts10[splitName]++;
+                    if (s20 && window.customSplits[splitName].includes(s20)) splitCounts20[splitName]++;
+                }
+            }
+        }
+        // Render Split Summary table
+        splitSummaryHtml = '<h3>Split Summary</h3>';
+        splitSummaryHtml += '<table id="split-summary"><thead><tr><th>Split</th><th>Now</th><th>+5</th><th>+10</th><th>+20</th></tr></thead><tbody>';
+        for (const splitName of Object.keys(window.customSplits)) {
+            const count = splitCounts[splitName] || 0;
+            const c5 = splitCounts5[splitName] || 0;
+            const c10 = splitCounts10[splitName] || 0;
+            const c20 = splitCounts20[splitName] || 0;
+            function getClass(val) {
+                if (val < 5) return 'ss-green';
+                else if (val >= 6 && val <= 10) return 'ss-yellow';
+                else if (val > 11) return 'ss-red';
+                else return '';
+            }
+            splitSummaryHtml += `<tr><td>${splitName}</td>`
+                + `<td class="${getClass(count)}">${count}</td>`
+                + `<td class="${getClass(c5)}">${c5}</td>`
+                + `<td class="${getClass(c10)}">${c10}</td>`
+                + `<td class="${getClass(c20)}">${c20}</td></tr>`;
+        }
+        splitSummaryHtml += '</tbody></table>';
+    }
+    // --- Specialty summary table (existing logic) ---
     for (const p of projections) {
         let specialty = (typeof p.altitude === 'number' && p.altitude < 10000) ? null : p.specialty;
         if (specialty && specialty.trim() !== '') {
             specialtyCounts[specialty] = (specialtyCounts[specialty] || 0) + 1;
         }
-        // +5, +10, +20 projections using correct logic
         function getProjSpecialty(proj, alt) {
             if (!proj) return null;
             let found = null;
@@ -330,7 +434,6 @@ function renderResults(projections) {
         const c5 = projCounts5[specialty] || 0;
         const c10 = projCounts10[specialty] || 0;
         const c20 = projCounts20[specialty] || 0;
-        // Helper to get class for a count
         function getClass(val) {
             if (val < 5) return 'ss-green';
             else if (val >= 6 && val <= 10) return 'ss-yellow';
@@ -363,33 +466,6 @@ function renderResults(projections) {
         specialtyLog.push(row);
     }
 
-    // --- Inbound/Outbound/Internal/Overflight summary table ---
-    let inbound = 0, outbound = 0, internal = 0, overflight = 0;
-    for (const p of projections) {
-        let dep = (p.departure || '').toUpperCase();
-        let arr = (p.arrival || '').toUpperCase();
-        let depInZHU = ZHU_AIRPORTS.includes(dep);
-        let arrInZHU = ZHU_AIRPORTS.includes(arr);
-        if (p.nearPerimeter || arrInZHU) {
-            inbound++;
-        } else if (depInZHU && arrInZHU) {
-            internal++;
-        } else if (depInZHU) {
-            outbound++;
-        } else {
-            overflight++;
-        }
-    }
-    let ioHtml = '<h3>Traffic Type Summary</h3>';
-    ioHtml += '<table id="io-summary"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>';
-    ioHtml += `<tr><td>Inbound</td><td>${inbound}</td></tr>`;
-    ioHtml += `<tr><td>Outbound</td><td>${outbound}</td></tr>`;
-    ioHtml += `<tr><td>Internal</td><td>${internal}</td></tr>`;
-    ioHtml += `<tr><td>Overflight</td><td>${overflight}</td></tr>`;
-    ioHtml += '</tbody></table>';
-    container.innerHTML += ioHtml;
-
-
     // --- ZHU Enroute Online table ---
     // This table lists all controllers with callsigns starting with HOU_ (ZHU Enroute)
     const zhuControllers = window.zhuControllers || [];
@@ -405,10 +481,10 @@ function renderResults(projections) {
     }
     zhuHtml += '</tbody></table>';
 
-    // Render Specialty Summary, Traffic Type Summary, and ZHU Enroute Online side by side, each in a card (flex container)
+    // Render Specialty Summary, Split Summary (if present), and ZHU Enroute Online side by side, each in a card (flex container)
     let summaryWrapper = '<div class="summary-flex">';
     summaryWrapper += `<div class="card">${summaryHtml}</div>`;
-    summaryWrapper += `<div class="card">${ioHtml}</div>`;
+    if (splitSummaryHtml) summaryWrapper += `<div class="card">${splitSummaryHtml}</div>`;
     summaryWrapper += `<div class="card">${zhuHtml}</div>`;
     summaryWrapper += '</div>';
     container.innerHTML = summaryWrapper;
@@ -511,5 +587,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         updateLogButtons();
+    }
+
+    // --- Split Upload Logic ---
+    var splitUploadBtn = document.getElementById('split-upload-btn');
+    var splitUploadInput = document.getElementById('split-upload');
+    if (splitUploadBtn && splitUploadInput) {
+        splitUploadBtn.onclick = function() {
+            splitUploadInput.value = '';
+            splitUploadInput.click();
+        };
+        splitUploadInput.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const splits = JSON.parse(evt.target.result);
+                    if (typeof splits !== 'object' || Array.isArray(splits)) throw new Error('Invalid format');
+                    // Validate: each value should be array of strings
+                    for (const key in splits) {
+                        if (!Array.isArray(splits[key]) || !splits[key].every(x => typeof x === 'string')) {
+                            throw new Error('Each split must be an array of sector names/IDs');
+                        }
+                    }
+                    window.customSplits = splits;
+                    alert('Custom split uploaded successfully!');
+                    // Optionally, trigger a refresh
+                    autoUpdateData();
+                } catch (err) {
+                    alert('Error parsing split file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        };
     }
 });
