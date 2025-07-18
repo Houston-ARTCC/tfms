@@ -502,6 +502,9 @@ let lastUpdate = null;
 let nextUpdate = null;
 let countdownInterval = null;
 
+// Version number for display in footer
+const TOOL_VERSION = '1.5.0';
+
 function updateFooter() {
     const footer = document.getElementById('footer');
     if (!footer) return;
@@ -511,7 +514,7 @@ function updateFooter() {
     let flightCount = (typeof window.lastFlightCount === 'number') ? window.lastFlightCount : '';
     let flightInfo = flightCount !== '' ? `Found <b>${flightCount}</b> airborne flights.<br>` : '';
     let processing = window.processingStatus ? `<span id="processing-status">${window.processingStatus}</span><br>` : '';
-    footer.innerHTML = `${processing}${flightInfo}Last updated: <b>${ts}</b> &nbsp;|&nbsp; Next update in: <b><span id="countdown">${secs}</span> sec</b>`;
+    footer.innerHTML = `${processing}${flightInfo}Last updated: <b>${ts}</b> &nbsp;|&nbsp; Next update in: <b><span id="countdown">${secs}</span> sec</b><br><span style='color:#90caf9;font-size:1em;'>Version ${TOOL_VERSION}</span>`;
 }
 
 async function autoUpdateData() {

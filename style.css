@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap');
+
 #footer-card {
   position: fixed;
   left: 0;
@@ -13,7 +15,6 @@
   background: #23262f;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.32);
 }
-@import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap');
 
 .card-wide table,
 .card-wide th,
