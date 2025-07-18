@@ -456,12 +456,33 @@ function renderResults(projections) {
             for (const specialty of allSpecialties.sort()) {
                 specialtyLogHeaders.push(`${specialty} Now`);
             }
+            // Add custom split headers if present
+            if (window.customSplits) {
+                for (const splitName of Object.keys(window.customSplits)) {
+                    specialtyLogHeaders.push(`${splitName} Split Now`);
+                }
+            }
             specialtyLog.push(specialtyLogHeaders);
         }
         // Build row (UTC timestamp, only NOW columns)
         let row = [new Date().toISOString().replace('T', ' ').replace(/\..+/, '') + 'Z'];
         for (const specialty of allSpecialties.sort()) {
             row.push(specialtyCounts[specialty] || 0);
+        }
+        // Add custom split counts if present
+        if (window.customSplits) {
+            for (const splitName of Object.keys(window.customSplits)) {
+                // Use splitCounts from above (recompute if needed)
+                let splitCount = 0;
+                // Find flights in this split (Now)
+                for (const p of projections) {
+                    let sectorNow = (typeof p.altitude === 'number' && p.altitude < 10000) ? null : p.sector;
+                    if (sectorNow && window.customSplits[splitName].includes(sectorNow)) {
+                        splitCount++;
+                    }
+                }
+                row.push(splitCount);
+            }
         }
         specialtyLog.push(row);
     }
@@ -503,7 +524,7 @@ let nextUpdate = null;
 let countdownInterval = null;
 
 // Version number for display in footer
-const TOOL_VERSION = '1.5.0';
+const TOOL_VERSION = '1.5.1';
 
 function updateFooter() {
     const footer = document.getElementById('footer');
