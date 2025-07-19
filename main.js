@@ -1,3 +1,6 @@
+// Version number for display in footer
+const TOOL_VERSION = '1.5.3';
+
 // ZHU airports for highlighting
 const ZHU_AIRPORTS = [
     'KAEX','KARA','KAUS','KBAZ','KBFM','KBIX','KBPT','KBRO','KBTR','KCLL','KCRP','KCWF','KCXO','KDLF','KDWH','KEDC','KEFD','KGLS','KGPT','KGTU','KHDC','KHOU','KHRL','KHSA','KHUM','KHYI','KIAH','KLCH','KLFT','KLRD','KMFE','KMOB','KMSY','KNBG','KNEW','KNGP','KNGW','KNOG','KNQI','KNWL','KPOE','KPQL','KRND','KSAT','KSGR','KSKF','KSSF','KTME','KVCT'
@@ -450,16 +453,16 @@ function renderResults(projections) {
         const c10 = projCounts10[specialty] || 0;
         const c20 = projCounts20[specialty] || 0;
         function getClass(val) {
-            if (val < 5) return 'ss-green';
-            else if (val >= 6 && val <= 10) return 'ss-yellow';
-            else if (val > 11) return 'ss-red';
+            if (val >= 0 && val <= 9) return 'ss-green';
+            else if (val >= 10 && val <= 19) return 'ss-yellow';
+            else if (val >= 20) return 'ss-red';
             else return '';
         }
         summaryHtml += `<tr><td>${specialty}</td>`
-            + `<td class=\"${getClass(count)}\">${count}</td>`
-            + `<td class=\"${getClass(c5)}\">${c5}</td>`
-            + `<td class=\"${getClass(c10)}\">${c10}</td>`
-            + `<td class=\"${getClass(c20)}\">${c20}</td></tr>`;
+            + `<td class="${getClass(count)}">${count}</td>`
+            + `<td class="${getClass(c5)}">${c5}</td>`
+            + `<td class="${getClass(c10)}">${c10}</td>`
+            + `<td class="${getClass(c20)}">${c20}</td></tr>`;
     }
     summaryHtml += '</tbody></table>';
 
@@ -538,8 +541,6 @@ let lastUpdate = null;
 let nextUpdate = null;
 let countdownInterval = null;
 
-// Version number for display in footer
-const TOOL_VERSION = '1.5.2';
 
 function updateFooter() {
     const footer = document.getElementById('footer');
