@@ -91,8 +91,11 @@ async function updateData() {
         ]);
         // Store sectors globally for projection lookup
         window.sectorsGeoJSON = sectors;
-        // Extract HOU_ controllers for ZHU Enroute Online table
-        window.zhuControllers = (vatsim.controllers || []).filter(ctrl => ctrl.callsign && ctrl.callsign.startsWith('HOU_'));
+        // Extract HOU_##_CTR controllers for ZHU Enroute Online table
+        window.zhuControllers = (vatsim.controllers || []).filter(ctrl => {
+            // Match HOU_##_CTR where ## are any two digits
+            return ctrl.callsign && /^HOU_\d{2}_CTR$/.test(ctrl.callsign);
+        });
         window.processingStatus = 'Processing data...';
         updateFooter();
         // Find ZHU perimeter polygon (sector === 'zhu')
