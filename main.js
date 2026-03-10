@@ -8,6 +8,7 @@ const ZHU_AIRPORTS = [
 
 const VATSIM_API = 'https://data.vatsim.net/v3/vatsim-data.json'; // CORS-enabled mirror
 const HOUSTON_SECTORS_GEOJSON = 'sectors.geojson'; // Place your GeoJSON file in the root folder
+let sectorsPromise = null;
 
 // Helper: Fetch VATSIM data
 async function fetchVatsimData() {
@@ -20,9 +21,61 @@ async function fetchVatsimData() {
 
 // Helper: Fetch GeoJSON
 async function fetchSectors() {
-    const res = await fetch(HOUSTON_SECTORS_GEOJSON);
-    if (!res.ok) throw new Error('Failed to fetch sector GeoJSON');
-    return res.json();
+    if (!sectorsPromise) {
+        sectorsPromise = fetch(HOUSTON_SECTORS_GEOJSON)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch sector GeoJSON');
+                return res.json();
+            })
+            .catch(err => {
+                sectorsPromise = null;
+                throw err;
+            });
+    }
+    return sectorsPromise;
+}
+
+function buildSectorIndex(sectors) {
+    const features = [];
+    const specialtySet = new Set();
+    let zhuPerimeter = null;
+    for (const feature of sectors.features || []) {
+        const properties = feature.properties || {};
+        const sector = properties.sector;
+        const isZhu = typeof sector === 'string' && sector.toLowerCase() === 'zhu';
+        const polygon = feature.geometry && feature.geometry.coordinates ? feature.geometry.coordinates[0] : null;
+        const floor = (properties.floor !== undefined && properties.floor !== null) ? Number(properties.floor) : -99999;
+        const ceiling = (properties.ceiling !== undefined && properties.ceiling !== null) ? Number(properties.ceiling) : 99999;
+        if (properties.specialty) specialtySet.add(properties.specialty);
+        if (isZhu) zhuPerimeter = polygon;
+        features.push({
+            properties,
+            polygon,
+            floor,
+            ceiling,
+            isZhu
+        });
+    }
+    return {
+        features,
+        zhuPerimeter,
+        specialties: Array.from(specialtySet).sort()
+    };
+}
+
+function classifyPosition(lat, lon, altitude, sectorIndex, opts = {}) {
+    const excludeZhu = opts.excludeZhu !== false;
+    for (let i = 0; i < sectorIndex.features.length; ++i) {
+        const feature = sectorIndex.features[i];
+        if (excludeZhu && feature.isZhu) continue;
+        if (!feature.polygon) continue;
+        if (pointInPolygon([lon, lat], feature.polygon)) {
+            if (typeof altitude === 'number' && altitude >= feature.floor && altitude < feature.ceiling) {
+                return feature.properties;
+            }
+        }
+    }
+    return null;
 }
 
 // Helper: Point-in-Polygon (Ray Casting)
@@ -89,6 +142,10 @@ async function updateData() {
             fetchVatsimData(),
             fetchSectors()
         ]);
+        if (!window.sectorIndex) {
+            window.sectorIndex = buildSectorIndex(sectors);
+        }
+        const sectorIndex = window.sectorIndex;
         // Store sectors globally for projection lookup
         window.sectorsGeoJSON = sectors;
         // Extract HOU_##_CTR controllers for ZHU Enroute Online table
@@ -99,32 +156,12 @@ async function updateData() {
         window.processingStatus = 'Processing data...';
         updateFooter();
         // Find ZHU perimeter polygon (sector === 'zhu')
-        let zhuPerimeter = null;
-        for (const feature of sectors.features) {
-            if (feature.properties && feature.properties.sector && feature.properties.sector.toLowerCase() === 'zhu') {
-                zhuPerimeter = feature.geometry.coordinates[0];
-                break;
-            }
-        }
+        let zhuPerimeter = sectorIndex.zhuPerimeter;
         // Find which sector each pilot is in (exclude sector=zhu for assignment)
         let flights = vatsim.pilots.map(pilot => {
             if (!pilot.latitude || !pilot.longitude) return null;
-            let found = null;
             let altitude = pilot.altitude;
-            for (let i = 0; i < sectors.features.length; ++i) {
-                const feature = sectors.features[i];
-                // Exclude sector=zhu from assignment
-                if (feature.properties && feature.properties.sector && feature.properties.sector.toLowerCase() === 'zhu') continue;
-                const poly = feature.geometry.coordinates[0];
-                if (pointInPolygon([pilot.longitude, pilot.latitude], poly)) {
-                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
-                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
-                    if (typeof altitude === 'number' && altitude >= floor && altitude < ceiling) {
-                        found = feature.properties;
-                        break;
-                    }
-                }
-            }
+            let found = classifyPosition(pilot.latitude, pilot.longitude, altitude, sectorIndex, { excludeZhu: true });
             if (found) {
                 return {
                     ...pilot,
@@ -175,20 +212,9 @@ async function updateData() {
                         }
                         let sector = '', specialty = '';
                         if (proj) {
-                            for (let i = 0; i < sectors.features.length; ++i) {
-                                const feature = sectors.features[i];
-                                if (feature.properties && feature.properties.sector && feature.properties.sector.toLowerCase() === 'zhu') continue;
-                                const poly = feature.geometry.coordinates[0];
-                                if (pointInPolygon([proj[1], proj[0]], poly)) {
-                                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
-                                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
-                                    if (typeof altitude === 'number' && altitude >= floor && altitude < ceiling) {
-                                        sector = feature.properties.sector;
-                                        specialty = feature.properties.specialty;
-                                        break;
-                                    }
-                                }
-                            }
+                            const projected = classifyPosition(proj[0], proj[1], altitude, sectorIndex, { excludeZhu: true });
+                            sector = projected ? projected.sector : '';
+                            specialty = projected ? projected.specialty : '';
                         }
                         return {
                             ...pilot,
@@ -208,6 +234,12 @@ async function updateData() {
             const { latitude, longitude, heading, groundspeed, altitude, callsign, sector, specialty, flight_plan } = flight;
             let departure = flight_plan && flight_plan.departure ? flight_plan.departure : '';
             let arrival = flight_plan && flight_plan.arrival ? flight_plan.arrival : '';
+            const proj5 = projectPosition(latitude, longitude, heading, groundspeed, 5);
+            const proj10 = projectPosition(latitude, longitude, heading, groundspeed, 10);
+            const proj20 = projectPosition(latitude, longitude, heading, groundspeed, 20);
+            const p5 = classifyPosition(proj5[0], proj5[1], altitude, sectorIndex, { excludeZhu: false });
+            const p10 = classifyPosition(proj10[0], proj10[1], altitude, sectorIndex, { excludeZhu: false });
+            const p20 = classifyPosition(proj20[0], proj20[1], altitude, sectorIndex, { excludeZhu: false });
             return {
                 callsign,
                 sector,
@@ -217,13 +249,19 @@ async function updateData() {
                 flight_plan,
                 groundspeed,
                 altitude,
-                proj5: projectPosition(latitude, longitude, heading, groundspeed, 5),
-                proj10: projectPosition(latitude, longitude, heading, groundspeed, 10),
-                proj20: projectPosition(latitude, longitude, heading, groundspeed, 20)
+                proj5,
+                proj10,
+                proj20,
+                proj5Sector: p5 ? p5.sector : null,
+                proj10Sector: p10 ? p10.sector : null,
+                proj20Sector: p20 ? p20.sector : null,
+                proj5Specialty: p5 ? p5.specialty : null,
+                proj10Specialty: p10 ? p10.specialty : null,
+                proj20Specialty: p20 ? p20.specialty : null
             };
         });
         // Display
-        renderResults(projections);
+        renderResults(projections, sectorIndex.specialties);
         window.lastFlightCount = projections.length;
         window.processingStatus = '';
         updateFooter();
@@ -256,7 +294,7 @@ let specialtyLogActive = false;
 let specialtyLog = [];
 let specialtyLogHeaders = [];
 
-function renderResults(projections) {
+function renderResults(projections, allSpecialties) {
     const container = document.getElementById('results');
     if (projections.length === 0) {
         container.innerHTML = '<p>No airborne flights found.</p>';
@@ -330,34 +368,11 @@ function renderResults(projections) {
     let projCounts5 = {}, projCounts10 = {}, projCounts20 = {};
     // --- Split summary table ---
     let splitSummaryHtml = '';
+    let splitCounts = null;
     if (window.customSplits) {
-        // Build sector lookup: sector name/id -> specialty
-        let sectorLookup = {};
-        for (const f of window.sectorsGeoJSON.features) {
-            if (f.properties && f.properties.sector) {
-                sectorLookup[f.properties.sector] = f.properties;
-            }
-        }
-        // Helper: get sector for a projection
-        function getProjSector(proj, alt) {
-            if (!proj) return null;
-            let found = null;
-            for (let i = 0; i < window.sectorsGeoJSON.features.length; ++i) {
-                const feature = window.sectorsGeoJSON.features[i];
-                const poly = feature.geometry.coordinates[0];
-                if (pointInPolygon([proj[1], proj[0]], poly)) {
-                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
-                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
-                    if (typeof alt === 'number' && alt >= floor && alt < ceiling) {
-                        found = feature.properties;
-                        break;
-                    }
-                }
-            }
-            return found ? found.sector : null;
-        }
         // Count flights per split
-        let splitCounts = {}, splitCounts5 = {}, splitCounts10 = {}, splitCounts20 = {};
+        splitCounts = {};
+        let splitCounts5 = {}, splitCounts10 = {}, splitCounts20 = {};
         for (const splitName in window.customSplits) {
             splitCounts[splitName] = 0;
             splitCounts5[splitName] = 0;
@@ -374,9 +389,9 @@ function renderResults(projections) {
             }
             // Projections
             if (!(typeof p.altitude === 'number' && p.altitude < 10000)) {
-                let s5 = getProjSector(p.proj5, p.altitude);
-                let s10 = getProjSector(p.proj10, p.altitude);
-                let s20 = getProjSector(p.proj20, p.altitude);
+                let s5 = p.proj5Sector;
+                let s10 = p.proj10Sector;
+                let s20 = p.proj20Sector;
                 for (const splitName in window.customSplits) {
                     if (s5 && window.customSplits[splitName].includes(s5)) splitCounts5[splitName]++;
                     if (s10 && window.customSplits[splitName].includes(s10)) splitCounts10[splitName]++;
@@ -412,41 +427,16 @@ function renderResults(projections) {
         if (specialty && specialty.trim() !== '') {
             specialtyCounts[specialty] = (specialtyCounts[specialty] || 0) + 1;
         }
-        function getProjSpecialty(proj, alt) {
-            if (!proj) return null;
-            let found = null;
-            for (let i = 0; i < window.sectorsGeoJSON.features.length; ++i) {
-                const feature = window.sectorsGeoJSON.features[i];
-                const poly = feature.geometry.coordinates[0];
-                if (pointInPolygon([proj[1], proj[0]], poly)) {
-                    let floor = (feature.properties.floor !== undefined && feature.properties.floor !== null) ? Number(feature.properties.floor) : -99999;
-                    let ceiling = (feature.properties.ceiling !== undefined && feature.properties.ceiling !== null) ? Number(feature.properties.ceiling) : 99999;
-                    if (typeof alt === 'number' && alt >= floor && alt < ceiling) {
-                        found = feature.properties;
-                        break;
-                    }
-                }
-            }
-            return found ? found.specialty : null;
-        }
         if (!(typeof p.altitude === 'number' && p.altitude < 10000)) {
-            let s5 = getProjSpecialty(p.proj5, p.altitude);
-            let s10 = getProjSpecialty(p.proj10, p.altitude);
-            let s20 = getProjSpecialty(p.proj20, p.altitude);
+            let s5 = p.proj5Specialty;
+            let s10 = p.proj10Specialty;
+            let s20 = p.proj20Specialty;
             if (s5) projCounts5[s5] = (projCounts5[s5] || 0) + 1;
             if (s10) projCounts10[s10] = (projCounts10[s10] || 0) + 1;
             if (s20) projCounts20[s20] = (projCounts20[s20] || 0) + 1;
         }
     }
-    // Get all specialties from GeoJSON (if available)
-    let allSpecialties = [];
-    if (window.sectorsGeoJSON) {
-        const set = new Set();
-        for (const f of window.sectorsGeoJSON.features) {
-            if (f.properties && f.properties.specialty) set.add(f.properties.specialty);
-        }
-        allSpecialties = Array.from(set);
-    }
+    allSpecialties = Array.isArray(allSpecialties) ? allSpecialties : [];
     // Ensure all 7 specialties are shown, even if count is 0
     let summaryHtml = '<h3>Specialty Summary</h3>';
     summaryHtml += '<table id="specialty-summary"><thead><tr><th>Specialty</th><th>Now</th><th>+5</th><th>+10</th><th>+20</th></tr></thead><tbody>';
@@ -493,16 +483,7 @@ function renderResults(projections) {
         // Add custom split counts if present
         if (window.customSplits) {
             for (const splitName of Object.keys(window.customSplits)) {
-                // Use splitCounts from above (recompute if needed)
-                let splitCount = 0;
-                // Find flights in this split (Now)
-                for (const p of projections) {
-                    let sectorNow = (typeof p.altitude === 'number' && p.altitude < 10000) ? null : p.sector;
-                    if (sectorNow && window.customSplits[splitName].includes(sectorNow)) {
-                        splitCount++;
-                    }
-                }
-                row.push(splitCount);
+                row.push(splitCounts ? (splitCounts[splitName] || 0) : 0);
             }
         }
         specialtyLog.push(row);
