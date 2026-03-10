@@ -1,5 +1,5 @@
 // Version number for display in footer
-const TOOL_VERSION = '1.5.4';
+const TOOL_VERSION = '1.5.5';
 
 // ZHU airports for highlighting
 const ZHU_AIRPORTS = [
